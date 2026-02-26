@@ -1,11 +1,11 @@
 ---
-name: Feature
-about: Suggest a new feature or improvement
+name: Fonctionnalité
+about: Suggérer une nouvelle fonctionnalité ou une amélioration
 title: ""
 type: feature
 assignees: ''
 ---
 
-## Summary
+## Résumé
 
-A clear and concise description of the feature you'd like to see.
+Une description claire et concise de la fonctionnalité que vous souhaitez voir.

@@ -1,21 +1,21 @@
 ---
-name: Task
-about: A unit of work to be done
+name: Tâche
+about: Une unité de travail à réaliser
 title: ""
 type: task
 assignees: ''
 ---
 
-## Objective
+## Objectif
 
-Describe the task and its goal.
+Décrivez la tâche et son but.
 
-## Acceptance Criteria
+## Critères d'acceptation
 
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
+- [ ] Critère 1
+- [ ] Critère 2
+- [ ] Critère 3
 
 ## Notes
 
-Any additional context, references, or constraints.
+Tout contexte, référence ou contrainte supplémentaire.

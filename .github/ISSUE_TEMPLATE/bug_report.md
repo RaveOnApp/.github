@@ -1,6 +1,6 @@
 ---
 name: Bug
-about: Report a bug or unexpected behavior
+about: Signaler un bug ou un comportement inattendu
 title: ""
 type: bug
 assignees: ''
@@ -8,23 +8,23 @@ assignees: ''
 
 ## Description
 
-A clear and concise description of the bug.
+Une description claire et concise du bug.
 
-## Steps to Reproduce
+## Étapes pour reproduire
 
-1. Go to '...'
-2. Click on '...'
-3. Scroll down to '...'
-4. See error
+1. Aller à '...'
+2. Cliquer sur '...'
+3. Faire défiler jusqu'à '...'
+4. Voir l'erreur
 
-## Expected Behavior
+## Comportement attendu
 
-A clear and concise description of what you expected to happen.
+Une description claire et concise de ce que vous attendiez.
 
-## Actual Behavior
+## Comportement réel
 
-A clear and concise description of what actually happened.
+Une description claire et concise de ce qui s'est réellement passé.
 
-## Environment
+## Environnement
 
-- Platform: [ ] iOS  [ ] Android
+- Plateforme : [ ] iOS  [ ] Android
