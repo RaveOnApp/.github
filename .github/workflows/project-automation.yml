@@ -134,3 +134,91 @@ jobs:
             });
 
             core.info(`Issue #${issue.number} : statut mis à jour "${currentStatus}" → "${label}".`);
+
+  set-release-property:
+    if: github.event.label.name == 'Release' && github.event.action == 'labeled'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Release custom field to Status Release description
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            const issue = context.payload.issue;
+            const owner = 'RaveOnApp';
+
+            // Récupérer le projet, les champs et l'item lié à l'issue
+            const projectData = await github.graphql(`
+              query($owner: String!, $issueId: ID!) {
+                organization(login: $owner) {
+                  projectsV2(first: 1) {
+                    nodes {
+                      id
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { id name description }
+                          }
+                          ... on ProjectV2Field {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                node(id: $issueId) {
+                  ... on Issue {
+                    projectItems(first: 10) {
+                      nodes {
+                        id
+                        project { id }
+                      }
+                    }
+                  }
+                }
+              }
+            `, { owner, issueId: issue.node_id });
+
+            const project = projectData.organization.projectsV2.nodes[0];
+            const projectItem = projectData.node.projectItems.nodes.find(
+              item => item.project.id === project.id
+            );
+            if (!projectItem) {
+              core.setFailed("Aucun item de projet lié à cette issue.");
+              return;
+            }
+
+            // Trouver le champ Release
+            const releaseField = project.fields.nodes.find(f => f.name === 'Release');
+            if (!releaseField) {
+              core.setFailed('Champ "Release" introuvable dans le projet.');
+              return;
+            }
+
+            // Trouver la description du statut Release
+            const statusField = project.fields.nodes.find(f => f.name === 'Status');
+            const releaseOption = statusField.options.find(o => o.name === 'Release');
+            const releaseDescription = releaseOption?.description || '';
+
+            // Mettre à jour le champ Release (texte)
+            await github.graphql(`
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId
+                  itemId: $itemId
+                  fieldId: $fieldId
+                  value: { text: $value }
+                }) { projectV2Item { id } }
+              }
+            `, {
+              projectId: project.id,
+              itemId: projectItem.id,
+              fieldId: releaseField.id,
+              value: releaseDescription,
+            });
+
+            core.info(`Issue #${issue.number} : champ Release du projet défini à "${releaseDescription}".`);
