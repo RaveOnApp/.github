@@ -1,177 +1,136 @@
 name: Project Column Automation
 
 on:
-  projects_v2_item:
-    types:
-      - edited
-      - converted
-      - reordered
+  issues:
+    types: [labeled, unlabeled]
+  workflow_call:
 
 jobs:
-  handle-status-change:
+  sync-label-to-status:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
     steps:
-      - name: Get project item details
-        id: item
+      - name: Sync issue label to project status
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT }}
           script: |
-            const payload = context.payload;
-            const item = payload.projects_v2_item;
-            if (!item) {
-              core.info('No project item in payload, skipping.');
+            const STATUS_LABELS = ['Backlog', 'Accepted', 'To do', 'In progress', 'Done', 'Release'];
+
+            const label = context.payload.label?.name;
+            if (!label || !STATUS_LABELS.includes(label)) {
+              core.info(`Label "${label}" n'est pas un label de statut, ignoré.`);
               return;
             }
-            core.setOutput('item_id', item.node_id);
-            core.setOutput('content_type', item.content_type);
-            core.setOutput('content_node_id', item.content_node_id);
-            core.info(`Project item changed: ${item.node_id} (${item.content_type})`);
 
-      - name: Resolve issue from project item
-        id: resolve
-        if: steps.item.outputs.content_type == 'Issue'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const contentNodeId = '${{ steps.item.outputs.content_node_id }}';
-            const result = await github.graphql(`
-              query($nodeId: ID!) {
-                node(id: $nodeId) {
-                  ... on Issue {
-                    number
-                    repository { nameWithOwner }
+            if (context.payload.action === 'unlabeled') {
+              core.info(`Label "${label}" retiré, aucune action sur le projet.`);
+              return;
+            }
+
+            // Récupérer l'issue courante uniquement
+            const issue = context.payload.issue;
+            const issueNodeId = issue.node_id;
+            const owner = 'RaveOnApp';
+
+            // Trouver le projet et le champ Status
+            const projectData = await github.graphql(`
+              query($owner: String!, $issueId: ID!) {
+                organization(login: $owner) {
+                  projectsV2(first: 1) {
+                    nodes {
+                      id
+                      title
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { id name }
+                          }
+                        }
+                      }
+                    }
                   }
                 }
-              }
-            `, { nodeId: contentNodeId });
-
-            const issue = result.node;
-            if (!issue) {
-              core.warning('Could not resolve issue from node ID.');
-              return;
-            }
-
-            const [owner, repo] = issue.repository.nameWithOwner.split('/');
-            core.setOutput('issue_number', issue.number);
-            core.setOutput('owner', owner);
-            core.setOutput('repo', repo);
-            core.info(`Resolved issue #${issue.number} in ${owner}/${repo}`);
-
-      - name: Handle item moved to In Progress
-        if: >-
-          github.event.changes.field_value.field_name == 'Status' &&
-          github.event.changes.field_value.to.name == 'In Progress' &&
-          steps.resolve.outputs.issue_number != ''
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const owner = '${{ steps.resolve.outputs.owner }}';
-            const repo = '${{ steps.resolve.outputs.repo }}';
-            const issueNumber = parseInt('${{ steps.resolve.outputs.issue_number }}', 10);
-
-            // Add "in-progress" label
-            try {
-              await github.rest.issues.addLabels({
-                owner,
-                repo,
-                issue_number: issueNumber,
-                labels: ['in-progress'],
-              });
-              core.info(`Added "in-progress" label to issue #${issueNumber}`);
-            } catch (err) {
-              core.warning(`Could not add label: ${err.message}`);
-            }
-
-      - name: Handle item moved to Done
-        if: >-
-          github.event.changes.field_value.field_name == 'Status' &&
-          github.event.changes.field_value.to.name == 'Done' &&
-          steps.resolve.outputs.issue_number != ''
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const owner = '${{ steps.resolve.outputs.owner }}';
-            const repo = '${{ steps.resolve.outputs.repo }}';
-            const issueNumber = parseInt('${{ steps.resolve.outputs.issue_number }}', 10);
-
-            // Close the issue
-            try {
-              await github.rest.issues.update({
-                owner,
-                repo,
-                issue_number: issueNumber,
-                state: 'closed',
-                state_reason: 'completed',
-              });
-              core.info(`Closed issue #${issueNumber}`);
-            } catch (err) {
-              core.warning(`Could not close issue: ${err.message}`);
-            }
-
-      - name: Handle item moved to Release
-        if: >-
-          github.event.changes.field_value.field_name == 'Status' &&
-          github.event.changes.field_value.to.name == 'Release' &&
-          steps.resolve.outputs.issue_number != ''
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const itemId = '${{ steps.item.outputs.item_id }}';
-            const projectId = context.payload.project_v2.id;
-            // R�cup�rer la description de la colonne "Release"
-            const columns = await github.graphql(`
-              query($projectId: ID!) {
-                node(id: $projectId) {
-                  ... on ProjectV2 {
-                    fields(first: 20) {
+                node(id: $issueId) {
+                  ... on Issue {
+                    projectItems(first: 10) {
                       nodes {
-                        name
-                        ... on ProjectV2Field {
-                          description
+                        id
+                        project {
                           id
+                        }
+                        fieldValues(first: 20) {
+                          nodes {
+                            ... on ProjectV2ItemFieldSingleSelectValue {
+                              name
+                              field { ... on ProjectV2SingleSelectField { name } }
+                            }
+                          }
                         }
                       }
                     }
                   }
                 }
               }
-            `, { projectId });
+            `, { owner, issueId: issueNodeId });
 
-            const releaseField = columns.node.fields.nodes.find(f => f.name === 'Release');
-            const releaseDescription = releaseField?.description || '';
-            if (!releaseField) {
-              core.warning('Champ Release non trouv�.');
+            const projects = projectData.organization.projectsV2.nodes;
+            if (!projects.length) {
+              core.setFailed('Aucun projet trouvé pour cette organisation.');
+              return;
+            }
+            const project = projects[0];
+            core.info(`Projet utilisé : ${project.title} (${project.id})`);
+
+            const statusField = project.fields.nodes.find(f => f.name === 'Status');
+            if (!statusField) {
+              core.setFailed('Champ "Status" introuvable dans le projet.');
               return;
             }
 
-            // Mettre � jour le champ custom "Item.Release" avec la description
-            try {
-              await github.graphql(`
-                mutation($itemId: ID!, $fieldId: ID!, $value: String!) {
-                  updateProjectV2ItemFieldValue(input: {
-                    projectId: "${projectId}",
-                    itemId: $itemId,
-                    fieldId: $fieldId,
-                    value: { text: $value }
-                  }) {
-                    projectV2Item {
-                      id
-                    }
-                  }
-                }
-              `, {
-                itemId,
-                fieldId: releaseField.id,
-                value: releaseDescription
-              });
-              core.info('Champ Item.Release mis � jour avec la description.');
-            } catch (err) {
-              core.warning(`Erreur lors de la mise � jour du champ: ${err.message}`);
+            // Trouver l'item du projet correspondant à cette issue
+            const projectItem = projectData.node.projectItems.nodes.find(
+              item => item.project.id === project.id
+            );
+
+            if (!projectItem) {
+              core.info(`L'issue #${issue.number} n'est pas dans le projet.`);
+              return;
             }
+
+            // Vérifier le statut actuel
+            const currentStatus = projectItem.fieldValues.nodes.find(
+              fv => fv.field?.name === 'Status'
+            )?.name;
+
+            if (currentStatus === label) {
+              core.info(`Statut déjà à jour : "${label}".`);
+              return;
+            }
+
+            // Trouver l'option correspondante
+            const option = statusField.options.find(o => o.name === label);
+            if (!option) {
+              core.warning(`Option "${label}" introuvable dans le champ Status.`);
+              return;
+            }
+
+            // Mettre à jour le statut
+            await github.graphql(`
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId
+                  itemId: $itemId
+                  fieldId: $fieldId
+                  value: { singleSelectOptionId: $optionId }
+                }) { projectV2Item { id } }
+              }
+            `, {
+              projectId: project.id,
+              itemId: projectItem.id,
+              fieldId: statusField.id,
+              optionId: option.id,
+            });
+
+            core.info(`Issue #${issue.number} : statut mis à jour "${currentStatus}" → "${label}".`);
