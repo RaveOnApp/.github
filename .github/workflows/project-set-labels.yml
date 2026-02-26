@@ -12,16 +12,17 @@ jobs:
         with:
           github-token: ${{ secrets.PAT }}
           script: |
-            const STATUS_LABELS = ['Backlog', 'Accepted', 'To do', 'In progress', 'Done', 'Release'];
+            const STATUS_LABELS = ['Backlog', 'Accepted', 'To do', 'In progress', 'Done', 'Pre-release', 'Release'];
             const labelColors = {
-              'Backlog':      'c0c0c0',
+              'Backlog':      '0e8a16',
               'Accepted':     '0075ca',
-              'To do':        'e4e669',
+              'To do':        '0075ca',
               'In progress':  'fbca04',
-              'Done':         '0e8a16',
-              'Release':      'd93f0b',
+              'Done':         'e4681e',
+              'Pre-release':  'e99695',
+              'Release':      '5319e7',
             };
-            const owner = 'RaveOnApp';
+            const owner = context.repo.owner;
 
             // Trouver le projet au niveau organisation
             const projectsResult = await github.graphql(`
@@ -84,7 +85,10 @@ jobs:
             const checkedRepos = new Set();
 
             for (const item of allItems) {
-              if (!item.content || item.content.number == null) continue;
+              if (!item.content || item.content.number == null) {
+                core.warning(`Item ignoré (content null) — probablement un repo privé inaccessible avec le PAT actuel.`);
+                continue;
+              }
               const issueNumber = item.content.number;
               const repo = item.content.repository.name;
               const repoOwner = item.content.repository.owner.login;
