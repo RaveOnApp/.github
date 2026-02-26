@@ -136,7 +136,7 @@ jobs:
             core.info(`Issue #${issue.number} : statut mis à jour "${currentStatus}" → "${label}".`);
 
   set-release-property:
-    if: github.event.label.name == 'Release' && github.event.action == 'labeled'
+    if: github.event.label.name == 'Pre-release' && github.event.action == 'labeled'
     runs-on: ubuntu-latest
     steps:
       - name: Set Release custom field to Status Release description
@@ -202,7 +202,7 @@ jobs:
 
             // Find the description of the Release status
             const statusField = project.fields.nodes.find(f => f.name === 'Status');
-            const releaseOption = statusField.options.find(o => o.name === 'Release');
+            const releaseOption = statusField.options.find(o => o.name === 'Pre-release');
             const releaseDescription = releaseOption?.description || '';
 
             // Update the Versioning field (text)
