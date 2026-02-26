@@ -1,0 +1,115 @@
+name: Project Column Automation
+
+on:
+  projects_v2_item:
+    types:
+      - edited
+      - converted
+      - reordered
+
+jobs:
+  handle-status-change:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Get project item details
+        id: item
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const payload = context.payload;
+            const item = payload.projects_v2_item;
+            if (!item) {
+              core.info('No project item in payload, skipping.');
+              return;
+            }
+            core.setOutput('item_id', item.node_id);
+            core.setOutput('content_type', item.content_type);
+            core.setOutput('content_node_id', item.content_node_id);
+            core.info(`Project item changed: ${item.node_id} (${item.content_type})`);
+
+      - name: Resolve issue from project item
+        id: resolve
+        if: steps.item.outputs.content_type == 'Issue'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const contentNodeId = '${{ steps.item.outputs.content_node_id }}';
+            const result = await github.graphql(`
+              query($nodeId: ID!) {
+                node(id: $nodeId) {
+                  ... on Issue {
+                    number
+                    repository { nameWithOwner }
+                  }
+                }
+              }
+            `, { nodeId: contentNodeId });
+
+            const issue = result.node;
+            if (!issue) {
+              core.warning('Could not resolve issue from node ID.');
+              return;
+            }
+
+            const [owner, repo] = issue.repository.nameWithOwner.split('/');
+            core.setOutput('issue_number', issue.number);
+            core.setOutput('owner', owner);
+            core.setOutput('repo', repo);
+            core.info(`Resolved issue #${issue.number} in ${owner}/${repo}`);
+
+      - name: Handle item moved to In Progress
+        if: >-
+          github.event.changes.field_value.field_name == 'Status' &&
+          github.event.changes.field_value.to.name == 'In Progress' &&
+          steps.resolve.outputs.issue_number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = '${{ steps.resolve.outputs.owner }}';
+            const repo = '${{ steps.resolve.outputs.repo }}';
+            const issueNumber = parseInt('${{ steps.resolve.outputs.issue_number }}', 10);
+
+            // Add "in-progress" label
+            try {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                labels: ['in-progress'],
+              });
+              core.info(`Added "in-progress" label to issue #${issueNumber}`);
+            } catch (err) {
+              core.warning(`Could not add label: ${err.message}`);
+            }
+
+      - name: Handle item moved to Done
+        if: >-
+          github.event.changes.field_value.field_name == 'Status' &&
+          github.event.changes.field_value.to.name == 'Done' &&
+          steps.resolve.outputs.issue_number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = '${{ steps.resolve.outputs.owner }}';
+            const repo = '${{ steps.resolve.outputs.repo }}';
+            const issueNumber = parseInt('${{ steps.resolve.outputs.issue_number }}', 10);
+
+            // Close the issue
+            try {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+              core.info(`Closed issue #${issueNumber}`);
+            } catch (err) {
+              core.warning(`Could not close issue: ${err.message}`);
+            }
