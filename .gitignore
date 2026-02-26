@@ -1,0 +1,49 @@
+# Fichiers et dossiers générés par Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+bin/
+obj/
+[Bb]uild/
+[Bb]uild[Ll]og.*
+
+# Fichiers de publication
+*.publish.xml
+
+# Fichiers de test
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Paquets NuGet
+*.nupkg
+packages/
+*.snupkg
+
+# Fichiers de configuration
+*.config.user
+
+# Fichiers temporaires
+*.tmp
+*.log
+
+# Fichiers de sauvegarde
+*.bak
+
+# Fichiers de base de données locaux
+*.dbmdl
+
+# Fichiers de cache
+*.cache
+
+# Fichiers générés par l’éditeur
+*.swp
+*.sln.ide
+
+# Dossiers de dépendances
+node_modules/
