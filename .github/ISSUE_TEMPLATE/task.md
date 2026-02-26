@@ -1,8 +1,8 @@
 ---
 name: Task
 about: A unit of work to be done
-title: "[TASK] "
-labels: task
+title: ""
+type: task
 assignees: ''
 ---
 
