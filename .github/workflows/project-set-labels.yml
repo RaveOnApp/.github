@@ -24,7 +24,7 @@ jobs:
             };
             const owner = context.repo.owner;
 
-            // Trouver le projet au niveau organisation
+            // Find the project at organization level
             const projectsResult = await github.graphql(`
               query($owner: String!) {
                 organization(login: $owner) {
@@ -37,13 +37,13 @@ jobs:
 
             const projects = projectsResult.organization.projectsV2.nodes;
             if (!projects.length) {
-              core.warning('Aucun projet trouvé pour cette organisation.');
+              core.warning('No project found for this organization.');
               return;
             }
             const project = projects[0];
-            core.info(`Projet utilisé : ${project.title} (${project.id})`);
+            core.info(`Project used: ${project.title} (${project.id})`);
 
-            // Récupérer tous les items du projet avec leur statut et leur repo
+            // Get all items from the project with their status and repo
             let allItems = [];
             let cursor = null;
             let hasNextPage = true;
@@ -81,12 +81,12 @@ jobs:
               cursor = items.pageInfo.endCursor;
             }
 
-            // Cache des labels déjà vérifiés par repo
+            // Cache for repos already processed
             const checkedRepos = new Set();
 
             for (const item of allItems) {
               if (!item.content || item.content.number == null) {
-                core.warning(`Item ignoré (content null) — probablement un repo privé inaccessible avec le PAT actuel.`);
+                core.warning(`Item ignored (content null) — probably a private repo inaccessible with the current PAT.`);
                 continue;
               }
               const issueNumber = item.content.number;
@@ -96,34 +96,36 @@ jobs:
               const statusField = item.fieldValues.nodes.find(fv => fv.field && fv.field.name === 'Status');
               const status = statusField?.name;
               if (!status || !STATUS_LABELS.includes(status)) {
-                core.info(`${repoOwner}/${repo}#${issueNumber} : statut "${status}" ignoré.`);
+                core.info(`${repoOwner}/${repo}#${issueNumber} : status "${status}" ignored.`);
                 continue;
               }
 
-              // Créer les labels manquants dans ce repo (une seule fois par repo)
+              // Delete all status labels and recreate them (once per repo)
               const repoKey = `${repoOwner}/${repo}`;
               if (!checkedRepos.has(repoKey)) {
                 checkedRepos.add(repoKey);
                 const existingLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner: repoOwner, repo });
                 const existingLabelNames = existingLabels.map(l => l.name);
+
+                // Delete all status labels
                 for (const label of STATUS_LABELS) {
-                  if (!existingLabelNames.includes(label)) {
-                    await github.rest.issues.createLabel({ owner: repoOwner, repo, name: label, color: labelColors[label] || 'ededed' });
-                    core.info(`Label créé dans ${repoKey} : ${label}`);
+                  if (existingLabelNames.includes(label)) {
+                    await github.rest.issues.deleteLabel({ owner: repoOwner, repo, name: label });
+                    core.info(`Label deleted in ${repoKey}: ${label}`);
                   }
                 }
-                for (const label of existingLabels) {
-                  if (!STATUS_LABELS.includes(label.name)) {
-                    await github.rest.issues.deleteLabel({ owner: repoOwner, repo, name: label.name });
-                    core.info(`Label supprimé dans ${repoKey} : ${label.name}`);
-                  }
+
+                // Recreate all status labels
+                for (const label of STATUS_LABELS) {
+                  await github.rest.issues.createLabel({ owner: repoOwner, repo, name: label, color: labelColors[label] || 'ededed' });
+                  core.info(`Label created in ${repoKey}: ${label}`);
                 }
               }
 
-              // Appliquer le label de statut en conservant les autres labels
+              // Apply the status label to the issue, keeping other labels
               const issue = await github.rest.issues.get({ owner: repoOwner, repo, issue_number: issueNumber });
               const currentLabels = issue.data.labels.map(l => l.name);
               const newLabels = [...currentLabels.filter(l => !STATUS_LABELS.includes(l)), status];
               await github.rest.issues.setLabels({ owner: repoOwner, repo, issue_number: issueNumber, labels: newLabels });
-              core.info(`${repoKey}#${issueNumber} : label "${status}" appliqué.`);
+              core.info(`${repoKey}#${issueNumber} : label "${status}" applied.`);
             }
