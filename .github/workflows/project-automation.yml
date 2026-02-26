@@ -147,7 +147,7 @@ jobs:
             const issue = context.payload.issue;
             const owner = 'RaveOnApp';
 
-            // Récupérer le projet, les champs et l'item lié à l'issue
+            // Retrieve the project, fields, and the item linked to the issue
             const projectData = await github.graphql(`
               query($owner: String!, $issueId: ID!) {
                 organization(login: $owner) {
@@ -192,19 +192,20 @@ jobs:
               return;
             }
 
-            // Trouver le champ Release
-            const releaseField = project.fields.nodes.find(f => f.name === 'Release');
-            if (!releaseField) {
-              core.setFailed('Champ "Release" introuvable dans le projet.');
+
+            // Find the Versioning field
+            const versioningField = project.fields.nodes.find(f => f.name === 'Versioning');
+            if (!versioningField) {
+              core.setFailed('Champ "Versioning" introuvable dans le projet.');
               return;
             }
 
-            // Trouver la description du statut Release
+            // Find the description of the Release status
             const statusField = project.fields.nodes.find(f => f.name === 'Status');
             const releaseOption = statusField.options.find(o => o.name === 'Release');
             const releaseDescription = releaseOption?.description || '';
 
-            // Mettre à jour le champ Release (texte)
+            // Update the Versioning field (text)
             await github.graphql(`
               mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {
                 updateProjectV2ItemFieldValue(input: {
@@ -217,8 +218,8 @@ jobs:
             `, {
               projectId: project.id,
               itemId: projectItem.id,
-              fieldId: releaseField.id,
+              fieldId: versioningField.id,
               value: releaseDescription,
             });
 
-            core.info(`Issue #${issue.number} : champ Release du projet défini à "${releaseDescription}".`);
+            core.info(`Issue #${issue.number} : champ Versioning du projet défini à "${releaseDescription}".`);
