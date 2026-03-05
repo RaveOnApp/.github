@@ -9,12 +9,15 @@ set -e
 # Charger la config globale
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../../config.env"
-BASE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 
 # Demander les informations nécessaires
 read -p "Entrez l'URL du repo ou de l'organisation (ex: https://github.com/owner/repo): " REPO_URL
 read -p "Entrez le token d'enregistrement du runner: " RUNNER_TOKEN
 read -p "Entrez le nom du runner: " RUNNER_NAME
+
+# Installation du GitHub Actions Runner
+echo "Installation du GitHub Actions Runner..."
 
 
 # Créer un dossier pour le runner dans BASE_DIR
@@ -26,20 +29,20 @@ cd "$RUNNER_DIR"
 sudo apt update
 sudo apt install curl wget grep coreutils gawk -y
 
-# Télécharger le dernier binaire du runner
-echo "Téléchargement du GitHub Actions Runner..."
-LATEST_URL=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | grep browser_download_url | grep linux-x64 | cut -d '"' -f 4)
 
-# Télécharger et extraire le runner
-echo "Téléchargement de $LATEST_URL..."
-wget "$LATEST_URL" -O actions-runner-linux-x64.tar.gz
+# Version et hash du runner à installer
+RUNNER_VERSION="2.332.0"
+RUNNER_HASH="f2094522a6b9afeab07ffb586d1eb3f190b6457074282796c497ce7dce9e0f2a"
 
-tar xzf actions-runner-linux-x64.tar.gz
+# Télécharger le binaire du runner
+echo "Téléchargement du GitHub Actions Runner v$RUNNER_VERSION..."
+RUNNER_PKG="actions-runner-linux-x64-$RUNNER_VERSION.tar.gz"
+RUNNER_URL="https://github.com/actions/runner/releases/download/v$RUNNER_VERSION/$RUNNER_PKG"
+curl -o "$RUNNER_PKG" -L "$RUNNER_URL"
 
-# Configurer le runner
-./config.sh --url "$REPO_URL" --token "$RUNNER_TOKEN" --name "$RUNNER_NAME" --unattended
+# Extraire le runner
+tar xzf "$RUNNER_PKG"
 
-# Lancer le runner
-./run.sh
 
-echo "Runner GitHub Actions installé et lancé avec succès !"
+echo "Pour configurer le runner, lance :"
+bash "$SCRIPT_DIR/config.sh" "$REPO_URL" "$RUNNER_TOKEN" "$RUNNER_NAME"
