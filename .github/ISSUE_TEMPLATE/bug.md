@@ -12,10 +12,10 @@ Une description claire et concise du bug.
 
 ## Étapes pour reproduire
 
-1. Aller à '...'
-2. Cliquer sur '...'
-3. Faire défiler jusqu'à '...'
-4. Voir l'erreur
+1. 
+2. 
+3. 
+4. 
 
 ## Comportement attendu
 
@@ -27,4 +27,5 @@ Une description claire et concise de ce qui s'est réellement passé.
 
 ## Environnement
 
-- Plateforme : [ ] iOS  [ ] Android
+- [ ] iOS
+- [ ] Android

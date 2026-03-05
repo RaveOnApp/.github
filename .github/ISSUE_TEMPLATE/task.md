@@ -6,7 +6,7 @@ type: task
 assignees: ''
 ---
 
-## Objectif
+## Description
 
 Décrivez la tâche et son but.
 
