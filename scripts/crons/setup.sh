@@ -1,11 +1,12 @@
+
 #!/bin/bash
+# Charger la config globale
+source "$(cd "$(dirname "$0")/../../" && pwd)/config.env"
 
 # Script d'installation des tâches cron
 # Usage: ./setup.sh
 
 set -e
-
-CRONS_DIR="$(cd "$(dirname "$0")/../../crons" && pwd)"
 
 echo "Installation des tâches cron depuis $CRONS_DIR..."
 

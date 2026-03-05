@@ -1,0 +1,3 @@
+# managed-by:.github
+# Redémarre automatiquement le GitHub Actions Runner si le process n'est pas actif
+* * * * * pgrep -f "{{RUN_SH_PATH}}" > /dev/null || nohup bash -c 'exec -a github-runner {{RUN_SH_PATH}}' >> {{LOG_PATH}} 2>&1

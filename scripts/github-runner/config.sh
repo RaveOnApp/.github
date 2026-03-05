@@ -1,13 +1,12 @@
-#!/bin/bash
 
+#!/bin/bash
 # Script de configuration d'un GitHub Actions Runner
 # Usage: ./config.sh <REPO_URL> <PAT> <RUNNER_NAME>
 
 set -e
 
 # Charger la config globale
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/../../config.env"
+source "$(cd "$(dirname "$0")/../../" && pwd)/config.env"
 
 # Récupérer les paramètres
 if [ "$#" -eq 3 ]; then
@@ -34,13 +33,9 @@ if [[ "$RUNNER_TOKEN" == ghp_* || "$RUNNER_TOKEN" == github_pat_* ]]; then
   RUNNER_TOKEN="$REG_TOKEN"
 fi
 # Se placer dans le dossier du runner
-RUNNER_DIR="$BASE_DIR/github-runner"
-cd "$RUNNER_DIR"
+cd "$EXTERNAL_GITHUB_RUNNER_DIR"
 
 # Configurer le runner
 ./config.sh --url "$REPO_URL" --token "$RUNNER_TOKEN" --name "$RUNNER_NAME" --unattended
 
-# Lancer le runner en arrière-plan
-nohup ./run.sh &
-
-echo "Runner GitHub Actions configuré et lancé avec succès !"
+bash "$SCRIPTS_DIR/github-runner/apply-cron.sh"

@@ -7,23 +7,18 @@
 set -e
 
 # Charger la config globale
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/../../config.env"
+source "$(cd "$(dirname "$0")/../../" && pwd)/config.env"
 
 
 # Demander les informations nécessaires
+echo "Configuration du GitHub Actions Runner"
 read -p "Entrez l'URL du repo ou de l'organisation (ex: https://github.com/owner/repo): " REPO_URL
 read -p "Entrez le token d'enregistrement du runner: " RUNNER_TOKEN
 read -p "Entrez le nom du runner: " RUNNER_NAME
 
-# Installation du GitHub Actions Runner
-echo "Installation du GitHub Actions Runner..."
-
-
-# Créer un dossier pour le runner dans BASE_DIR
-RUNNER_DIR="$BASE_DIR/github-runner"
-mkdir -p "$RUNNER_DIR"
-cd "$RUNNER_DIR"
+# Créer un dossier pour le runner dans EXTERNAL_GITHUB_RUNNER_DIR
+mkdir -p "$EXTERNAL_GITHUB_RUNNER_DIR"
+cd "$EXTERNAL_GITHUB_RUNNER_DIR"
 
 # Installer les dépendances nécessaires
 sudo apt update
@@ -43,6 +38,4 @@ curl -o "$RUNNER_PKG" -L "$RUNNER_URL"
 # Extraire le runner
 tar xzf "$RUNNER_PKG"
 
-
-echo "Pour configurer le runner, lance :"
-bash "$SCRIPT_DIR/config.sh" "$REPO_URL" "$RUNNER_TOKEN" "$RUNNER_NAME"
+bash "$GITHUB_RUNNER_DIR/config.sh" "$REPO_URL" "$RUNNER_TOKEN" "$RUNNER_NAME"
