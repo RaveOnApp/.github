@@ -9,12 +9,19 @@ jobs:
   sync-label-to-status:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout .github repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/.github
+          token: ${{ secrets.PAT }}
+          path: dot-github
+
       - name: Sync issue label to project status
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.PAT }}
           script: |
-            const STATUS_LABELS = ['Backlog', 'Accepted', 'To do', 'In progress', 'Done', 'Pre-release', 'Release'];
+            const { STATUS_LABELS } = require('./dot-github/.github/scripts/status-labels.js');
 
             const label = context.payload.label?.name;
             if (!label || !STATUS_LABELS.includes(label)) {
