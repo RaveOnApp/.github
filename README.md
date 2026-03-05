@@ -1,5 +1,60 @@
 # RaveOnAutomation
 
+Repo centralisé de génération, déploiement et automatisation des services :
+**GitHub Runner**, **API**, **Base de données SQL**, **Crons**.
+
+## Structure du repo
+
+```
+.github.git/
+├── .github/
+│   ├── ISSUE_TEMPLATE/         # Templates d'issues (bug, feature, task)
+│   └── workflows/              # GitHub Actions workflows
+├── crons/
+│   ├── cleanup.cron            # Nettoyage des logs
+│   └── db-backup.cron          # Sauvegarde de la base de données
+├── scripts/
+│   ├── github-runner/
+│   │   └── install.sh          # Installation et démarrage du GitHub Actions Runner
+│   ├── api/
+│   │   └── deploy.sh           # Déploiement de l'API
+│   ├── db/
+│   │   ├── setup.sh            # Configuration initiale de la base de données
+│   │   └── migrate.sh          # Exécution des migrations SQL
+│   └── crons/
+│       └── setup.sh            # Installation des tâches cron
+└── README.md
+```
+
+## Services
+
+### GitHub Runner
+Installe et configure un GitHub Actions Runner auto-hébergé.
+```bash
+bash scripts/github-runner/install.sh
+```
+
+### API
+Déploie l'API sur l'environnement cible.
+```bash
+bash scripts/api/deploy.sh --env production --tag latest
+```
+
+### Base de données SQL
+Configure la base et applique les migrations.
+```bash
+bash scripts/db/setup.sh --env production
+bash scripts/db/migrate.sh --env production
+```
+
+### Crons
+Installe toutes les tâches cron définies dans `crons/*.cron`.
+```bash
+bash scripts/crons/setup.sh
+```
+
+---
+
 A collection of GitHub automation templates and workflows for project management.
 
 ## Issue Templates
