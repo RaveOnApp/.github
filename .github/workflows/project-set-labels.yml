@@ -12,16 +12,7 @@ jobs:
         with:
           github-token: ${{ secrets.PAT }}
           script: |
-            const STATUS_LABELS = ['Backlog', 'Accepted', 'To do', 'In progress', 'Done', 'Pre-release', 'Release'];
-            const labelColors = {
-              'Backlog':      '0e8a16',
-              'Accepted':     '0075ca',
-              'To do':        '0075ca',
-              'In progress':  'fbca04',
-              'Done':         'e4681e',
-              'Pre-release':  'e99695',
-              'Release':      '5319e7',
-            };
+            const { STATUS_LABELS, LABEL_COLORS } = require('../scripts/status-labels.js');
             const owner = context.repo.owner;
 
             // Find the project at organization level
@@ -117,7 +108,7 @@ jobs:
 
                 // Recreate all status labels
                 for (const label of STATUS_LABELS) {
-                  await github.rest.issues.createLabel({ owner: repoOwner, repo, name: label, color: labelColors[label] || 'ededed' });
+                  await github.rest.issues.createLabel({ owner: repoOwner, repo, name: label, color: LABEL_COLORS[label] || 'ededed' });
                   core.info(`Label created in ${repoKey}: ${label}`);
                 }
               }

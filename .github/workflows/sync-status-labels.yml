@@ -1,0 +1,38 @@
+name: Sync Status Labels
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync-status-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Synchronize status labels across all repos
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            const { STATUS_LABELS, LABEL_COLORS } = require('../scripts/status-labels.js');
+            const owner = context.repo.owner;
+
+            // Get all repos in the org
+            const repos = await github.paginate(github.rest.repos.listForOrg, { org: owner });
+            for (const repo of repos) {
+              const repoName = repo.name;
+              core.info(`Syncing labels for repo: ${owner}/${repoName}`);
+              // Get existing labels
+              const existingLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo: repoName });
+              const existingLabelNames = existingLabels.map(l => l.name);
+              // Delete status labels
+              for (const label of STATUS_LABELS) {
+                if (existingLabelNames.includes(label)) {
+                  await github.rest.issues.deleteLabel({ owner, repo: repoName, name: label });
+                  core.info(`Deleted label: ${label}`);
+                }
+              }
+              // Create status labels
+              for (const label of STATUS_LABELS) {
+                await github.rest.issues.createLabel({ owner, repo: repoName, name: label, color: LABEL_COLORS[label] || 'ededed' });
+                core.info(`Created label: ${label}`);
+              }
+            }
