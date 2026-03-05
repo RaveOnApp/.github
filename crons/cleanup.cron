@@ -1,0 +1,3 @@
+# managed-by:.github
+# Exemple de tâche cron : nettoyage des logs tous les jours à 2h du matin
+0 2 * * * /home/ichisamafr/dev/api/scripts/cleanup-logs.sh >> /var/log/cleanup.log 2>&1
