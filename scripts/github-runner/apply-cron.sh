@@ -14,8 +14,8 @@ if [ -n "$CRONS_DIR" ] && [ -n "$EXTERNAL_CRONS_DIR" ] && [ -n "$EXTERNAL_GITHUB
   mkdir -p "$EXTERNAL_GITHUB_RUNNER_DIR/logs"
 
   RUN_SH_PATH="$EXTERNAL_GITHUB_RUNNER_DIR/run.sh"
-  LOG_PATH="$EXETERNAL_LOGS_DIR/github-runner.log"
-  mkdir -p "$EXETERNAL_LOGS_DIR"
+  LOG_PATH="$EXTERNAL_LOGS_DIR/github_runner.log"
+  mkdir -p "$EXTERNAL_LOGS_DIR"
   touch "$LOG_PATH"
 
   # Copier et substituer les placeholders avec les chemins absolus
