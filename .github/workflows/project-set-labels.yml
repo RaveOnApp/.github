@@ -98,25 +98,25 @@ jobs:
                 continue;
               }
 
-              // Delete all status labels and recreate them (once per repo)
+              // Make sure all status labels exist (once per repo), without deleting anything
               const repoKey = `${repoOwner}/${repo}`;
               if (!checkedRepos.has(repoKey)) {
                 checkedRepos.add(repoKey);
                 const existingLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner: repoOwner, repo });
-                const existingLabelNames = existingLabels.map(l => l.name);
+                const existingByName = new Map(existingLabels.map(l => [l.name, l]));
 
-                // Delete all status labels
+                // Upsert: never delete, so labels stay attached to their issues
                 for (const label of STATUS_LABELS) {
-                  if (existingLabelNames.includes(label)) {
-                    await github.rest.issues.deleteLabel({ owner: repoOwner, repo, name: label });
-                    core.info(`Label deleted in ${repoKey}: ${label}`);
+                  const color = LABEL_COLORS[label] || 'ededed';
+                  const existing = existingByName.get(label);
+
+                  if (!existing) {
+                    await github.rest.issues.createLabel({ owner: repoOwner, repo, name: label, color });
+                    core.info(`Label created in ${repoKey}: ${label}`);
+                  } else if (existing.color.toLowerCase() !== color.toLowerCase()) {
+                    await github.rest.issues.updateLabel({ owner: repoOwner, repo, name: label, color });
+                    core.info(`Label color updated in ${repoKey}: ${label}`);
                   }
-                }
-
-                // Recreate all status labels
-                for (const label of STATUS_LABELS) {
-                  await github.rest.issues.createLabel({ owner: repoOwner, repo, name: label, color: LABEL_COLORS[label] || 'ededed' });
-                  core.info(`Label created in ${repoKey}: ${label}`);
                 }
               }
 

@@ -27,19 +27,24 @@ jobs:
             for (const repo of repos) {
               const repoName = repo.name;
               core.info(`Syncing labels for repo: ${owner}/${repoName}`);
+
               // Get existing labels
               const existingLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo: repoName });
-              const existingLabelNames = existingLabels.map(l => l.name);
-              // Delete status labels
+              const existingByName = new Map(existingLabels.map(l => [l.name, l]));
+
+              // Upsert: never delete, so labels stay attached to their issues
               for (const label of STATUS_LABELS) {
-                if (existingLabelNames.includes(label)) {
-                  await github.rest.issues.deleteLabel({ owner, repo: repoName, name: label });
-                  core.info(`Deleted label: ${label}`);
+                const color = LABEL_COLORS[label] || 'ededed';
+                const existing = existingByName.get(label);
+
+                if (!existing) {
+                  await github.rest.issues.createLabel({ owner, repo: repoName, name: label, color });
+                  core.info(`Created label: ${label}`);
+                } else if (existing.color.toLowerCase() !== color.toLowerCase()) {
+                  await github.rest.issues.updateLabel({ owner, repo: repoName, name: label, color });
+                  core.info(`Updated color for label: ${label}`);
+                } else {
+                  core.info(`Label already up to date: ${label}`);
                 }
-              }
-              // Create status labels
-              for (const label of STATUS_LABELS) {
-                await github.rest.issues.createLabel({ owner, repo: repoName, name: label, color: LABEL_COLORS[label] || 'ededed' });
-                core.info(`Created label: ${label}`);
               }
             }
