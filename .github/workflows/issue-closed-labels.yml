@@ -1,4 +1,4 @@
-name: Issue Closed Labels
+﻿name: Issue Closed Labels
 
 on:
   issues:
@@ -34,6 +34,19 @@ jobs:
             const issueNumber = issue.number;
 
             const currentLabels = (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name));
+
+            // Issue déjà publiée : ne rien toucher
+            if (currentLabels.includes('Release')) {
+              core.info(`Issue #${issueNumber} : déjà en "Release", aucune modification.`);
+              return;
+            }
+            
+            // Issue déjà annulé : ne rien toucher
+            if (currentLabels.includes('Cancel')) {
+              core.info(`Issue #${issueNumber} : déjà en "Cancel", aucune modification.`);
+              return;
+            }
+
             const targetLabel = currentLabels.includes('Pre-release') ? 'Release' : 'Cancel';
 
             if (currentLabels.includes(targetLabel)) {
